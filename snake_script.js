@@ -1,105 +1,178 @@
 
 
-console.log("v1");
-
-// -- TIME
+// time
 const FPS = 90;
 const FRAME_TIME = 1000 / FPS;  
+var time_passed = 0;
+const CELLS_PER_SECOND = 7;
+const TIME_IN_CELL = 1 / CELLS_PER_SECOND;
 
-// -- CANVAS
+// canvas
 const CANVAS = document.getElementById("canvas");
 const CANVAS_CTX = CANVAS.getContext("2d");
 
 const CANV_WIDTH = CANVAS.width;
 const CANV_HEIGHT = CANVAS.height;
 
+// directions
+const STOP = -1, UP = 0, DOWN = 1, LEFT = 2, RIGHT = 3; 
 
-// -- MAP
-const TOT_ROWS = 16;
-const TOT_COLS = 16;
+// player
+var SNAKE = {
+    "ROW" : 3,
+    "COL" : 3,
+    "WIDTH" : 0,
+    "HEIGHT" : 0,
+    "COLOR" : "#0e49eb",
+    "DIRECTION" : STOP,
+    "NEXT_DIRECTION": null,
+    "CAN_CHANGE_DIR" : true,
+    "TAIL" : [],
+};
 
-const W = 1; // wall
-var MAP = [];
+var SMOOTH_SNAKE = {
+    "WIDTH": 0,
+    "HEIGHT": 0,
+    "COLOR": "#d6132d",
+    "TAIL": [{
+        "ROW" : SNAKE["ROW"],
+        "COL" : SNAKE["COL"],
+        "X": 0,
+        "Y": 0,
+        "DIRECTION" : STOP
+    }]
+}
 
-// -- WALL
-const WALL_WIDTH = 25;
-const WALL_HEIGHT = WALL_WIDTH;
+
+// map
+const MAP_ROWS = 17, MAP_COLS = 19;
+const WALL_WIDTH = CANV_WIDTH / MAP_COLS;
+const WALL_HEIGHT = CANV_HEIGHT / MAP_ROWS;
+const MAP = [];
+SNAKE["WIDTH"] = WALL_WIDTH;
+SNAKE["HEIGHT"] = WALL_HEIGHT;
+
+const SMOOTH_XVELOCITY = CELLS_PER_SECOND * WALL_WIDTH;
+const SMOOTH_YVELOCITY = CELLS_PER_SECOND * WALL_HEIGHT;
+
+const WALL = 1;
 const WALL_COLOR = "#2e8f21";
-var WALLS = [];     // [[wallx, wally] [...] ...]
-const WALL_X = 0, WALL_Y = 1;
-
 const SPACE_COLORS = ["#0a1f07", "#050f04"];
 
-// -- EMPTY SPACE
-var EMPTY_SPACES = [];   // [ [spacex, spacey] [...] ...]
-const SPACE_X = 0, SPACE_Y = 1;
-const INNER_SPACE_WIDTH = 5;
-const INNER_SPACE_HEIGHT = INNER_SPACE_WIDTH;
-
-// -- SNAKE
-var HEAD_START_ROW = 2;
-var HEAD_START_COL = 2;
-const SNAKE_SEG_WIDTH = WALL_WIDTH;
-const SNAKE_SEG_HEIGHT = SNAKE_SEG_WIDTH;
-var HEAD_X = HEAD_START_COL * SNAKE_SEG_WIDTH;
-var HEAD_Y = HEAD_START_ROW * SNAKE_SEG_HEIGHT;
-const SNAKE_SPEED = 250;
-const SNAKE_COLOR = "#d6132d";
-var HEAD_NEXT_DIRECTION = -1;
-const UP = 0, DOWN = 1, LEFT = 2, RIGHT = 3;
-// snake [ [row,col,x,y,direction], [...]]
-const HEAD = 0, SEG_ROW = 0, SEG_COL = 1, SEG_X = 2, SEG_Y = 3, DIRECTION = 4;
-var SNAKE = [ 
-    [HEAD_START_ROW, HEAD_START_COL, HEAD_X, HEAD_Y, -1]
-            ];
-
-
 function createMap() {
-    var row = [];
-    var wall_arr = [];
-    var space_arr = [];
+    for(var row = 0; row<MAP_ROWS; row ++) {
 
-    for(var rown = 0; rown < TOT_ROWS; rown++) {
-        row = [];
-        for(var coln = 0; coln < TOT_COLS; coln++) {
-            // fill sides with walls
-            if(rown == 0 || rown == (TOT_ROWS-1) || coln == 0 || coln == (TOT_COLS-1))  {
-                row.push(W);
+        var map_row = [];
+        for(var col = 0; col<MAP_COLS; col++) {
 
-                // memorizes wall x and y positions 
-                wall_arr[WALL_X] = (coln * WALL_WIDTH);
-                wall_arr[WALL_Y] = (rown * WALL_HEIGHT);
-                WALLS.push(wall_arr);
-                wall_arr = [];
+            if(row == 0 || row == (MAP_ROWS-1) || col == 0 || col == (MAP_COLS-1)) {
+                map_row.push(WALL);
+            } else {
+                map_row.push(0);
             }
-            else {
-                row.push(0);
-
-                space_arr[SPACE_X] = (coln * WALL_WIDTH);
-                space_arr[SPACE_Y] = (rown * WALL_HEIGHT);
-                EMPTY_SPACES.push(space_arr);
-                space_arr = [];
-            }
-        }
-        MAP.push(row);
+        }    
+        MAP.push(map_row);
     }
+}   
+
+function goTo(segment, target) {
+
+    if(segment["COL"] != target["COL"] && segment["ROW"] == target["ROW"]) {
+        if(segment["COL"] > target["COL"]) {
+            if(segment["DIRECTION"] != LEFT) {
+                centerSegment(segment);
+            }
+            segment["DIRECTION"] = LEFT;
+        } else {
+            if(segment["DIRECTION"] != RIGHT) {
+                centerSegment(segment);
+            }
+            segment["DIRECTION"] = RIGHT;
+        }
+    }
+
+    if(segment["COL"] == target["COL"] && segment["ROW"] != target["ROW"]) {
+        if(segment["ROW"] > target["ROW"]) {
+            if(segment["DIRECTION"] != UP) {
+                centerSegment(segment);
+            }
+            segment["DIRECTION"] = UP;
+        } else {
+            if(segment["DIRECTION"] != DOWN) {
+                centerSegment(segment);
+            }
+            segment["DIRECTION"] = DOWN;
+        }
+    }
+}
+
+function centerSegment(segment) {
+    segment["Y"] = segment["ROW"] * WALL_HEIGHT;
+    segment["X"] = segment["COL"] * WALL_WIDTH;
+}
+
+function addEventListener() {
+    document.addEventListener("keypress", function(event) {
+
+        switch(event.key.toLocaleLowerCase()) {
+            case 'w':
+                if(SNAKE["DIRECTION"] != DOWN) {
+                    if(SNAKE["CAN_CHANGE_DIR"]) {
+                        SNAKE["DIRECTION"] = UP;
+                        SNAKE["CAN_CHANGE_DIR"] = false;
+                    } else if (!SNAKE["CAN_CHANGE_DIR"] && SNAKE["NEXT_DIRECTION"] == null) {
+                        SNAKE["NEXT_DIRECTION"] = UP;
+                    }
+                }
+                break;
+            case 's':
+                if(SNAKE["DIRECTION"] != UP) {
+                    if(SNAKE["CAN_CHANGE_DIR"]) {
+                        SNAKE["DIRECTION"] = DOWN;
+                        SNAKE["CAN_CHANGE_DIR"] = false;
+                    } else if (!SNAKE["CAN_CHANGE_DIR"] && SNAKE["NEXT_DIRECTION"] == null) {
+                        SNAKE["NEXT_DIRECTION"] = DOWN;
+                    }
+                }
+                break;
+            case 'a':
+                if(SNAKE["DIRECTION"] != RIGHT) {
+                    if(SNAKE["CAN_CHANGE_DIR"]) {
+                        SNAKE["DIRECTION"] = LEFT;
+                        SNAKE["CAN_CHANGE_DIR"] = false;
+                    } else if (!SNAKE["CAN_CHANGE_DIR"] && SNAKE["NEXT_DIRECTION"] == null) {
+                        SNAKE["NEXT_DIRECTION"] = LEFT;
+                    }
+                }
+                break;
+            case 'd':
+                if(SNAKE["DIRECTION"] != LEFT) {
+                    if(SNAKE["CAN_CHANGE_DIR"]) {
+                        SNAKE["DIRECTION"] = RIGHT;
+                        SNAKE["CAN_CHANGE_DIR"] = false;
+                    } else if (!SNAKE["CAN_CHANGE_DIR"] && SNAKE["NEXT_DIRECTION"] == null) {
+                        SNAKE["NEXT_DIRECTION"] = RIGHT;
+                    }
+                }
+                break;
+        }
+        
+    });
+}
+
+function clearScreen() {
+    CANVAS_CTX.fillStyle = WALL_COLOR;
+    CANVAS_CTX.fillRect(0, 0 ,CANV_WIDTH, CANV_HEIGHT);
 }
 
 function drawMap() {
 
-    // CANVAS_CTX.fillRect(x, y, width, height)
-    var space_color = 0;
-    for(var row = 0; row<TOT_ROWS; row++) {
+    var space_color_ind = 0;
 
-        if(space_color == 0) 
-            space_color = 1;
-        else
-            space_color = 0;
+    for(var row = 0; row<MAP_ROWS; row++) {
+        for(var col = 0; col<MAP_COLS; col++) {
 
-
-        for(var col = 0; col<TOT_COLS; col++) {
-
-            if(MAP[row][col] == W) {
+            if(MAP[row][col] == WALL) {
                 CANVAS_CTX.fillStyle = WALL_COLOR;
                 CANVAS_CTX.fillRect((col * WALL_WIDTH),
                 (row * WALL_HEIGHT),
@@ -108,168 +181,176 @@ function drawMap() {
             }
                 
             if(MAP[row][col] == 0) {
-                CANVAS_CTX.fillStyle = SPACE_COLORS[space_color];
-                if(space_color == 0) 
-                    space_color = 1;
-                else
-                    space_color = 0;
-
+                CANVAS_CTX.fillStyle = SPACE_COLORS[space_color_ind];
                 CANVAS_CTX.fillRect((col * WALL_WIDTH),
                 (row * WALL_HEIGHT),
                 WALL_WIDTH,
                 WALL_HEIGHT);
+
+                if(space_color_ind == 0) {
+                    space_color_ind = 1;
+                } else {
+                    space_color_ind = 0;
+                }
             }
         }   
     }
 }
 
-function drawPlayer() {
-    
-    CANVAS_CTX.fillStyle = SNAKE_COLOR;
-    for(var snake_segn = 0; snake_segn<SNAKE.length; snake_segn++) {
-        
-        CANVAS_CTX.fillRect(SNAKE[snake_segn][SEG_X],
-        SNAKE[snake_segn][SEG_Y],
-        SNAKE_SEG_WIDTH,
-        SNAKE_SEG_HEIGHT);            
-    }
+function drawSnake() {
+    // CANVAS_CTX.fillStyle = SNAKE["COLOR"];
+    // CANVAS_CTX.fillRect(
+    //     SNAKE["COL"] * WALL_WIDTH,
+    //     SNAKE["ROW"] * WALL_HEIGHT,
+    //     SNAKE["WIDTH"],  
+    //     SNAKE["HEIGHT"]
+    // );            
+
+    // // draws tail
+    // for(var tail_ind = 0; tail_ind<SNAKE["TAIL"].length; tail_ind++) {
+    //     CANVAS_CTX.fillRect(
+    //         SNAKE["TAIL"][tail_ind]["COL"] * WALL_WIDTH,
+    //         SNAKE["TAIL"][tail_ind]["ROW"] * WALL_HEIGHT,
+    //         SNAKE["WIDTH"],
+    //         SNAKE["HEIGHT"]
+    //     );
+    // }
+
+    // draws smooth snake
+    CANVAS_CTX.fillStyle = SMOOTH_SNAKE["COLOR"];
+    CANVAS_CTX.fillRect(
+        SMOOTH_SNAKE["X"],
+        SMOOTH_SNAKE["Y"],
+        SMOOTH_SNAKE["WIDTH"],
+        SMOOTH_SNAKE["HEIGHT"]
+    ); 
+
+    // draws smooth snake's tail
+    for(var tail_ind = 0;tail_ind<SMOOTH_SNAKE["TAIL"].length; tail_ind++) {
+        CANVAS_CTX.fillRect(
+            SMOOTH_SNAKE["TAIL"][tail_ind]["X"],
+            SMOOTH_SNAKE["TAIL"][tail_ind]["Y"],
+            SMOOTH_SNAKE["WIDTH"],
+            SMOOTH_SNAKE["HEIGHT"]
+        ); 
+    }   
 }
 
-function clearScreen() {
-    CANVAS_CTX.fillStyle = "#000000";
-    CANVAS_CTX.fillRect(0, 0 ,CANV_WIDTH, CANV_HEIGHT);
-}
-
-function isPlayerColliding() {
-    
-    for(var walln = 0; walln<WALLS.length; walln++) {
-        if(SNAKE[HEAD][SEG_X] < WALLS[walln][WALL_X] + WALL_WIDTH &&
-            SNAKE[HEAD][SEG_X] + SNAKE_SEG_WIDTH > WALLS[walln][WALL_X] &&
-            SNAKE[HEAD][SEG_Y] < WALLS[walln][WALL_Y] + WALL_HEIGHT &&
-            SNAKE[HEAD][SEG_Y] + SNAKE_SEG_HEIGHT > WALLS[walln][WALL_Y]) {
-
-                switch(SNAKE[HEAD][DIRECTION]) {
-                    case UP:
-                        SNAKE[HEAD][SEG_Y] += (WALLS[walln][WALL_Y] + WALL_HEIGHT) - SNAKE[HEAD][SEG_Y];
-                        break;
-                    case DOWN:
-                        SNAKE[HEAD][SEG_Y] -= (SNAKE[HEAD][SEG_Y] + SNAKE_SEG_HEIGHT) - WALLS[walln][WALL_Y];
-                        break;
-                    case LEFT:
-                        SNAKE[HEAD][SEG_X] += (WALLS[walln][WALL_X] + WALL_WIDTH) - SNAKE[HEAD][SEG_X];
-                        break;
-                    case RIGHT:
-                        SNAKE[HEAD][SEG_X] -= (SNAKE[HEAD][SEG_X] + SNAKE_SEG_WIDTH) - WALLS[walln][WALL_X];
-                        break;
-                }
-                SNAKE[HEAD][DIRECTION] = -1;
-        }
-
-    }
-}
-
-function isPlayerInCenter() {
-    var inner_space_x, inner_space_y;
-    var player_center_x = SNAKE[HEAD][SEG_X] + (SNAKE_SEG_WIDTH / 2);
-    var player_center_y = SNAKE[HEAD][SEG_Y] + (SNAKE_SEG_HEIGHT / 2);
-
-    for(var spacen = 0; spacen<EMPTY_SPACES.length; spacen++) {
-
-        inner_space_x = EMPTY_SPACES[spacen][SPACE_X] + (WALL_WIDTH / 2 - (INNER_SPACE_WIDTH / 2));
-        inner_space_y = EMPTY_SPACES[spacen][SPACE_Y] + (WALL_HEIGHT / 2 - (INNER_SPACE_HEIGHT / 2));
-
-        if(player_center_x > inner_space_x &&
-        player_center_x < inner_space_x + INNER_SPACE_WIDTH &&
-        player_center_y > inner_space_y &&
-        player_center_y < inner_space_y + INNER_SPACE_HEIGHT) {
-
-            return true;
-        }
-    }
-}
-
-function addEventListener() {
-    document.addEventListener("keypress", function(event) {
-        
-        var moved = false;
-        switch(event.key) {
-            case 'w':
-                if(SNAKE[HEAD][DIRECTION] != DOWN) {
-                    moved = true;
-                    HEAD_NEXT_DIRECTION = UP;
-                }
-                break;
-            case 's':
-                if(SNAKE[HEAD][DIRECTION] != UP) {
-                    moved = true;
-                    HEAD_NEXT_DIRECTION = DOWN;
-                }
-                break;
-            case 'a':
-                if(SNAKE[HEAD][DIRECTION] != RIGHT) {
-                    moved = true;
-                    HEAD_NEXT_DIRECTION = LEFT;
-                }
-                break;
-            case 'd':
-                if(SNAKE[HEAD][DIRECTION] != LEFT) {
-                    moved = true;
-                    HEAD_NEXT_DIRECTION = RIGHT;
-                }
-                break;
-        }
-
-        if(moved && isPlayerInCenter())
-            SNAKE[HEAD][DIRECTION] = HEAD_NEXT_DIRECTION;
-    
+function addTail() {
+    SNAKE["TAIL"].push({"ROW": SNAKE["ROW"], "COL": SNAKE["COL"]});
+    SMOOTH_SNAKE["TAIL"].push({
+        "ROW" : SNAKE["ROW"],
+        "COL" : SNAKE["COL"],
+        "X": SNAKE["COL"] * WALL_WIDTH,
+        "Y": SNAKE["ROW"] * WALL_HEIGHT,
+        "DIRECTION" : STOP
     });
 }
 
-
 function update() {
-    switch(SNAKE[HEAD][DIRECTION]) {
-        case UP:
-            SNAKE[HEAD][SEG_Y] -= (SNAKE_SPEED * (FRAME_TIME / 1000));
-            break;
-        case DOWN:
-            SNAKE[HEAD][SEG_Y] += (SNAKE_SPEED * (FRAME_TIME / 1000));
-            break;
-        case LEFT:
-            SNAKE[HEAD][SEG_X] -= (SNAKE_SPEED * (FRAME_TIME / 1000));
-            break;
-        case RIGHT:
-            SNAKE[HEAD][SEG_X] += (SNAKE_SPEED * (FRAME_TIME / 1000));
-            break;
+    time_passed += FRAME_TIME / 1000;
+    if(time_passed > TIME_IN_CELL) {
+
+        // moves tail segmanets
+        for(var tail_ind = (SNAKE["TAIL"].length-1); tail_ind>=0; tail_ind--) {
+            
+            if(tail_ind > 0) { 
+                SNAKE["TAIL"][tail_ind]["ROW"] = SNAKE["TAIL"][tail_ind-1]["ROW"];    
+                SNAKE["TAIL"][tail_ind]["COL"] = SNAKE["TAIL"][tail_ind-1]["COL"];
+            }
+            if(tail_ind == 0) {
+                SNAKE["TAIL"][tail_ind]["ROW"] = SNAKE["ROW"];    
+                SNAKE["TAIL"][tail_ind]["COL"] = SNAKE["COL"];    
+            }
+        }
+        
+        switch(SNAKE["DIRECTION"]) {
+            case UP:
+                if(SNAKE["ROW"] - 1 != 0) { 
+                    SNAKE["ROW"] -= 1;
+                }
+                break;
+            case DOWN:
+                if(SNAKE["ROW"] + 1 != (MAP_ROWS-1)) { 
+                    SNAKE["ROW"] += 1;
+                }
+                break;
+            case LEFT:
+                if(SNAKE["COL"] - 1 != 0) { 
+                    SNAKE["COL"] -= 1;
+                }
+                break;
+            case RIGHT:
+                if(SNAKE["COL"] + 1 != (MAP_COLS-1)) { 
+                    SNAKE["COL"] += 1;
+                }
+                break;
+        }
+        SNAKE["CAN_CHANGE_DIR"] = true;
+        if(SNAKE["NEXT_DIRECTION"] != null) {
+            SNAKE["DIRECTION"] = SNAKE["NEXT_DIRECTION"];
+            SNAKE["NEXT_DIRECTION"] = null;
+        }
+
+        time_passed = 0;
     }
-    isPlayerColliding();
 
-    if(isPlayerInCenter() && HEAD_NEXT_DIRECTION != -1) {
-        SNAKE[HEAD][DIRECTION] = HEAD_NEXT_DIRECTION;
-        HEAD_NEXT_DIRECTION = -1;
+    
+    // moves smooth snake
+    for(var tail_ind = 0; tail_ind<SMOOTH_SNAKE["TAIL"].length; tail_ind++) {
+        
+        if(tail_ind == 0) {
+            goTo(SMOOTH_SNAKE["TAIL"][tail_ind], SNAKE);
+        } else {
+            goTo(SMOOTH_SNAKE["TAIL"][tail_ind], SNAKE["TAIL"][tail_ind-1]);
+        }
 
-        SNAKE[HEAD][SEG_X] = SNAKE[HEAD][SEG_COL] * WALL_WIDTH;
-        SNAKE[HEAD][SEG_Y] = SNAKE[HEAD][SEG_ROW] * WALL_HEIGHT;
+        switch(SMOOTH_SNAKE["TAIL"][tail_ind]["DIRECTION"]) {
+            case UP:
+                SMOOTH_SNAKE["TAIL"][tail_ind]["Y"] -= SMOOTH_YVELOCITY * (FRAME_TIME / 1000);
+                break;
+            case DOWN:
+                SMOOTH_SNAKE["TAIL"][tail_ind]["Y"] += SMOOTH_YVELOCITY * (FRAME_TIME / 1000);
+                break;
+            case LEFT:
+                SMOOTH_SNAKE["TAIL"][tail_ind]["X"] -= SMOOTH_XVELOCITY * (FRAME_TIME / 1000);
+                break;
+            case RIGHT:
+                SMOOTH_SNAKE["TAIL"][tail_ind]["X"] += SMOOTH_XVELOCITY * (FRAME_TIME / 1000);
+                break;
+        }
+
+        SMOOTH_SNAKE["TAIL"][tail_ind]["ROW"] = Math.trunc((SMOOTH_SNAKE["TAIL"][tail_ind]["Y"] + (SMOOTH_SNAKE["HEIGHT"]/2)) / WALL_HEIGHT); 
+        SMOOTH_SNAKE["TAIL"][tail_ind]["COL"] = Math.trunc((SMOOTH_SNAKE["TAIL"][tail_ind]["X"] + (SMOOTH_SNAKE["WIDTH"]/2)) / WALL_WIDTH); 
     }
-
-    SNAKE[HEAD][SEG_ROW] = Math.trunc((SNAKE[HEAD][SEG_Y] + (SNAKE_SEG_HEIGHT / 2)) / WALL_HEIGHT);
-    SNAKE[HEAD][SEG_COL] = Math.trunc((SNAKE[HEAD][SEG_X] + (SNAKE_SEG_WIDTH / 2)) / WALL_WIDTH);
 }
 
-function drawStuff() {
+function setup() {
+    createMap();
+
+    SMOOTH_SNAKE["TAIL"][0]["X"] = SNAKE["COL"] * SNAKE["WIDTH"];
+    SMOOTH_SNAKE["TAIL"][0]["Y"] = SNAKE["ROW"] * SNAKE["HEIGHT"];
+    SMOOTH_SNAKE["WIDTH"] = SNAKE["WIDTH"];
+    SMOOTH_SNAKE["HEIGHT"] = SNAKE["HEIGHT"];
+}
+
+function draw() {
     clearScreen();
     drawMap();
-    drawPlayer();
+    drawSnake();
 }
+
 
 function gameLoop() {
     update();
-    drawStuff();
-    
+    draw();
+
     setTimeout(gameLoop, FRAME_TIME);
 }
 
-createMap()
+setup();
+addTail();
+addTail();
+addTail();
 addEventListener();
 setTimeout(gameLoop, FRAME_TIME);
-
-
