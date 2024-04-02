@@ -7,6 +7,38 @@
 		<title> SNAKE </title>
 		<link href="https://fonts.cdnfonts.com/css/m37-feel-the-bit" rel="stylesheet">
 
+
+		<style>
+			.buttonRed {
+				background-color: transparent;
+				color: #d6132d;
+				font-size: 10px;
+				font-family: 'M37_FEEL THE BIT';
+				border: 2px solid #d6132d;
+				padding: 15px 16px;
+			}
+
+			.buttonBlue {
+				background-color: transparent;
+				color: #0e49eb;
+				font-size: 10px;
+				font-family: 'M37_FEEL THE BIT';
+				border: 2px solid #0e49eb;
+				padding: 15px 16px;
+			}
+			.length_txt {
+				color: rgb(0, 182, 0);
+				position: absolute;
+				left: 3%;
+				top: 40%
+			}
+			.length_num {
+				color: rgb(0, 182, 0);
+				position: absolute;
+				left: 13.5%;
+				top: 47%
+			}
+		</style>
 	</head>
 	
 	<body style="font-family: 'M37_FEEL THE BIT'; background-color:black">
@@ -14,10 +46,15 @@
 			<br/>
 			<h1 style="font-size: 30px; color: rgb(0, 170, 0)">## SNAKE ##</h1>
 			<h3 style="color: rgb(0, 182, 0)"> # by Radu # </h3>
+			<button class="buttonBlue" onclick="blueSnake()" id="blue">SEE BLUE SNAKE</button>
+			<button class="buttonRed" onclick="redSnake()" id="red">HIDE RED SNAKE</button>
+			<h5 class="length_txt"> - SNAKE LENGTH - </h5>
+			<h3 class="length_num" id="length"> 0 </h3>
+			<br/>
 			<br/>
 			<canvas id="canvas" width="600" height="500"></canvas>
 			
-			<script src="snake_script.js?v=4"></script>
+			<script src="snake_script.js?v=10"></script>
 		</center>
 	</body>
 
