@@ -19,7 +19,7 @@ const CANV_HEIGHT = CANVAS.height;
 const STOP = -1, UP = 0, DOWN = 1, LEFT = 2, RIGHT = 3; 
 
 // player
-
+var figu_img, tonno, minghie, skopo, wradie, diciasette, dai_cazzo;
 var VIEW_BLUE = false, VIEW_RED = true;
 
 var SNAKE = {
@@ -165,6 +165,9 @@ function centerSegment(segment) {
 
 function addEventListener() {
     document.addEventListener("keydown", function(event) {
+        if(SNAKE["DIRECTION"] == STOP) {
+            dai_cazzo.play();
+        }
 
         if(!gameStopped) {
             switch(event.key.toLocaleLowerCase()) {
@@ -288,8 +291,10 @@ function drawSnake() {
     
     if(VIEW_RED) {
         // draws smooth snake
-        CANVAS_CTX.fillStyle = SMOOTH_SNAKE["COLOR"];
+        CANVAS_CTX.fillStyle = "#F5C594";
         for(var tail_ind = 0;tail_ind<SMOOTH_SNAKE["TAIL"].length; tail_ind++) {
+
+
             CANVAS_CTX.fillRect(
                 SMOOTH_SNAKE["TAIL"][tail_ind]["X"],
                 SMOOTH_SNAKE["TAIL"][tail_ind]["Y"],
@@ -308,33 +313,25 @@ function drawSnake() {
             );
         }
 
-        // draws snake's eyes
-        CANVAS_CTX.fillStyle = SMOOTH_SNAKE["EYE_COLOR"];
-        for(var eye_ind = 0; eye_ind<SMOOTH_SNAKE["EYES"].length; eye_ind++) {
-            CANVAS_CTX.fillRect(
-                SMOOTH_SNAKE["EYES"][eye_ind]["X"],
-                SMOOTH_SNAKE["EYES"][eye_ind]["Y"],
-                SMOOTH_SNAKE["EYES"][eye_ind]["WIDTH"],
-                SMOOTH_SNAKE["EYES"][eye_ind]["HEIGHT"]
-            );
-        }
+        CANVAS_CTX.drawImage(
+            figu_img,
+            SMOOTH_SNAKE["TAIL"][0]["X"],
+            SMOOTH_SNAKE["TAIL"][0]["Y"],
+            SMOOTH_SNAKE["WIDTH"],
+            SMOOTH_SNAKE["HEIGHT"]
+        );
         
     }
 }
 
 function drawFruit() {
-    
-	CANVAS_CTX.fillStyle = FRUIT["COLOR"];
-	
-	CANVAS_CTX.beginPath();
-	//arc(x, y, radius, startAngle, endAngle, counterclockwise)
-	CANVAS_CTX.arc(
-        FRUIT["COL"] * WALL_WIDTH + (WALL_WIDTH / 2), 
-        FRUIT["ROW"] * WALL_HEIGHT + (WALL_HEIGHT / 2), 
-        FRUIT["RADIUS"], 
-        0,
-        2 * Math.PI);
-	CANVAS_CTX.fill();
+    CANVAS_CTX.drawImage(
+        tonno,
+        FRUIT["COL"] * WALL_WIDTH ,
+        FRUIT["ROW"] * WALL_HEIGHT, 
+        WALL_WIDTH,
+        WALL_HEIGHT
+    );
 }
 
 function addTail() {
@@ -384,58 +381,13 @@ function addTail() {
     }
 
     updateLenghtHMTL();
-
-}
-
-function positionEyes() {
-    switch(SNAKE["DIRECTION"]) {
-        case UP:
-            
-            SMOOTH_SNAKE["EYES"][0]["X"] = SMOOTH_SNAKE["TAIL"][0]["X"] + (SMOOTH_SNAKE["WIDTH"] / 10);
-            SMOOTH_SNAKE["EYES"][0]["Y"] = SMOOTH_SNAKE["TAIL"][0]["Y"] + (SMOOTH_SNAKE["HEIGHT"] / 2 - SMOOTH_SNAKE["EYES"][0]["HEIGHT"]);
-
-            SMOOTH_SNAKE["EYES"][1]["Y"] = SMOOTH_SNAKE["EYES"][0]["Y"];
-            SMOOTH_SNAKE["EYES"][1]["X"] = 
-                SMOOTH_SNAKE["TAIL"][0]["X"] + 
-                ((SMOOTH_SNAKE["WIDTH"] - SMOOTH_SNAKE["EYES"][1]["WIDTH"]) - 
-                (SMOOTH_SNAKE["EYES"][0]["X"] - SMOOTH_SNAKE["TAIL"][0]["X"])); 
-            break;
-        case DOWN:
-
-            SMOOTH_SNAKE["EYES"][0]["X"] = SMOOTH_SNAKE["TAIL"][0]["X"] + (SMOOTH_SNAKE["WIDTH"] / 10);
-            SMOOTH_SNAKE["EYES"][0]["Y"] = SMOOTH_SNAKE["TAIL"][0]["Y"] + (SMOOTH_SNAKE["HEIGHT"] / 2);
-
-            SMOOTH_SNAKE["EYES"][1]["Y"] = SMOOTH_SNAKE["EYES"][0]["Y"];
-            SMOOTH_SNAKE["EYES"][1]["X"] = 
-                SMOOTH_SNAKE["TAIL"][0]["X"] + 
-                ((SMOOTH_SNAKE["WIDTH"] - SMOOTH_SNAKE["EYES"][1]["WIDTH"]) - 
-                (SMOOTH_SNAKE["EYES"][0]["X"] - SMOOTH_SNAKE["TAIL"][0]["X"])); 
-            break;
-        case LEFT:
-            
-            SMOOTH_SNAKE["EYES"][0]["X"] = SMOOTH_SNAKE["TAIL"][0]["X"] + (SMOOTH_SNAKE["WIDTH"] / 2 - SMOOTH_SNAKE["EYES"][0]["WIDTH"]);
-            SMOOTH_SNAKE["EYES"][0]["Y"] = SMOOTH_SNAKE["TAIL"][0]["Y"] + (SMOOTH_SNAKE["HEIGHT"] / 10);
-
-            SMOOTH_SNAKE["EYES"][1]["X"] = SMOOTH_SNAKE["EYES"][0]["X"];
-            SMOOTH_SNAKE["EYES"][1]["Y"] = 
-                SMOOTH_SNAKE["TAIL"][0]["Y"] + 
-                ((SMOOTH_SNAKE["HEIGHT"] - SMOOTH_SNAKE["EYES"][1]["HEIGHT"]) - 
-                (SMOOTH_SNAKE["EYES"][0]["Y"] - SMOOTH_SNAKE["TAIL"][0]["Y"])); 
-            
-            break;
-        case RIGHT:
-                    
-            SMOOTH_SNAKE["EYES"][0]["X"] = SMOOTH_SNAKE["TAIL"][0]["X"] + (SMOOTH_SNAKE["WIDTH"] / 2);
-            SMOOTH_SNAKE["EYES"][0]["Y"] = SMOOTH_SNAKE["TAIL"][0]["Y"] + (SMOOTH_SNAKE["HEIGHT"] / 10);
-
-            SMOOTH_SNAKE["EYES"][1]["X"] = SMOOTH_SNAKE["EYES"][0]["X"];
-            SMOOTH_SNAKE["EYES"][1]["Y"] = 
-                SMOOTH_SNAKE["TAIL"][0]["Y"] + 
-                ((SMOOTH_SNAKE["HEIGHT"] - SMOOTH_SNAKE["EYES"][1]["HEIGHT"]) - 
-                (SMOOTH_SNAKE["EYES"][0]["Y"] - SMOOTH_SNAKE["TAIL"][0]["Y"])); 
-            break;
-            
+    if(SMOOTH_SNAKE["TAIL"].length == 10) {
+        wradie.play();
     }
+    if(SMOOTH_SNAKE["TAIL"].length == 17) {
+        diciasette.play();
+    }
+
 }
 
 function isOverItself() {
@@ -545,11 +497,15 @@ function update() {
     if(isOverItself()) {
         console.log("ouch");
         gameStopped = true;
+        skopo.play();
     }
 
     if(isOnFruit()) {
         addTail();
         placeFruit();
+        if(SMOOTH_SNAKE["TAIL"].length != 17 && SMOOTH_SNAKE["TAIL"].length != 10 ) {
+            minghie.play();
+        }
     }
     
     // moves smooth snake
@@ -584,7 +540,6 @@ function update() {
                 break;
         }
 
-        positionEyes();
     }
 }
 
@@ -595,21 +550,6 @@ function setup() {
     SMOOTH_SNAKE["TAIL"][0]["Y"] = SNAKE["ROW"] * SNAKE["HEIGHT"];
     SMOOTH_SNAKE["WIDTH"] = SNAKE["WIDTH"];
     SMOOTH_SNAKE["HEIGHT"] = SNAKE["HEIGHT"];
-    
-    for(var eye_ind = 0; eye_ind<SMOOTH_SNAKE["EYES"].length; eye_ind++) {
-        SMOOTH_SNAKE["EYES"][eye_ind]["WIDTH"] = SMOOTH_SNAKE["WIDTH"] / 4;
-        SMOOTH_SNAKE["EYES"][eye_ind]["HEIGHT"] = SMOOTH_SNAKE["HEIGHT"] / 4;    
-    }
-
-    // eye positioning when direcrion is right
-    SMOOTH_SNAKE["EYES"][0]["X"] = SMOOTH_SNAKE["TAIL"][0]["X"] + (SMOOTH_SNAKE["WIDTH"] / 2);
-    SMOOTH_SNAKE["EYES"][0]["Y"] = SMOOTH_SNAKE["TAIL"][0]["Y"] + (SMOOTH_SNAKE["HEIGHT"] / 10);
-
-    SMOOTH_SNAKE["EYES"][1]["X"] = SMOOTH_SNAKE["EYES"][0]["X"];
-    SMOOTH_SNAKE["EYES"][1]["Y"] = 
-        SMOOTH_SNAKE["TAIL"][0]["Y"] + 
-        ((SMOOTH_SNAKE["HEIGHT"] - SMOOTH_SNAKE["EYES"][1]["HEIGHT"]) - 
-        (SMOOTH_SNAKE["EYES"][0]["Y"] - SMOOTH_SNAKE["TAIL"][0]["Y"])); 
 
     // furit
     if(WALL_HEIGHT > WALL_WIDTH) {
@@ -623,6 +563,21 @@ function setup() {
     addTail();
     
     placeFruit();
+
+
+    figu_img = new Image();
+    figu_img.src = 'bellofigu.png';
+    
+    tonno = new Image();
+    tonno.src = 'tonno.png';
+
+    minghie = new Audio("minghie.mp3");
+    skopo = new Audio("skopo.mp3");
+    wradie = new Audio("wradie.mp3");
+    dai_cazzo = new Audio("dai_cazzo.mp3");
+    diciasette = new Audio("diciasette.mp3");
+
+
 }
 
 function draw() {
